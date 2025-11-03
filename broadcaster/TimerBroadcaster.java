@@ -6,13 +6,17 @@ public class TimerBroadcaster {
     public static void main(String[] args) {
         int udpPort = 9876;
         try (DatagramSocket socket = new DatagramSocket()) {
-            int countdown = 60; // 60 seconds for demo
+            int countdown = 60; // 60 seconds demo
             while (countdown >= 0) {
                 String msg = "Time left: " + countdown + " sec";
                 byte[] buffer = msg.getBytes();
                 InetAddress address = InetAddress.getByName("255.255.255.255"); // Broadcast
                 DatagramPacket packet = new DatagramPacket(buffer, buffer.length, address, udpPort);
                 socket.send(packet);
+
+                // 👇 This line shows progress in the console
+                System.out.println("Broadcasting: " + msg);
+
                 Thread.sleep(1000);
                 countdown--;
             }

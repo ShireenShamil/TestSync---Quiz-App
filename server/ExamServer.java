@@ -14,6 +14,7 @@ public class ExamServer {
         // Sample questions
         questions.add(new Question("What is 2+2?", new String[]{"3","4","5","6"}, 2));
         questions.add(new Question("Capital of Sri Lanka?", new String[]{"Colombo","Kandy","Galle","Jaffna"}, 1));
+        questions.add(new Question("Java is ___", new String[]{"Programming language","Coffee","OS","Browser"}, 1));
 
         ServerSocket serverSocket = new ServerSocket(PORT);
         System.out.println("Exam Server started on port " + PORT);
@@ -47,6 +48,7 @@ public class ExamServer {
                 }
 
                 out.writeObject("Exam completed! Thank you.");
+                ResultManager.printAllResults();
                 socket.close();
             } catch (Exception e) {
                 e.printStackTrace();

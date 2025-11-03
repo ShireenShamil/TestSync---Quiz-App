@@ -4,12 +4,12 @@ import server.Question;
 
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.*;
 import java.io.*;
 import java.net.*;
 import java.util.ArrayList;
 
 public class StudentClient {
+
     private static final String SERVER_IP = "localhost";
     private static final int SERVER_PORT = 12345;
     private static final int UDP_PORT = 9876;
@@ -25,16 +25,14 @@ public class StudentClient {
     private ObjectInputStream in;
 
     private Question currentQuestion;
-    private int questionIndex = 0;
-    private ArrayList<Integer> answers = new ArrayList<>();
 
     public static void main(String[] args) {
-        SwingUtilities.invokeLater(() -> new StudentClientGUI().showLogin());
+        SwingUtilities.invokeLater(() -> new StudentClient().showLogin());
     }
 
-    // --- Login Window ---
+    // --- LOGIN SCREEN ---
     private void showLogin() {
-        JFrame loginFrame = new JFrame("NetExam Login");
+        JFrame loginFrame = new JFrame("TestSync Login");
         loginFrame.setSize(300, 200);
         loginFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         loginFrame.setLayout(new GridLayout(3, 2));
@@ -55,46 +53,54 @@ public class StudentClient {
             String password = new String(passwordField.getPassword());
             try {
                 connectToServer(username, password);
-                loginFrame.dispose();
+                loginFrame.dispose(); // close login frame
                 createExamUI();
+                // start UDP listener for timer
                 new Thread(() -> UDPListener.listen(UDP_PORT, timerLabel)).start();
             } catch (Exception ex) {
                 JOptionPane.showMessageDialog(loginFrame, "Connection failed: " + ex.getMessage());
             }
         });
 
+        loginFrame.setLocationRelativeTo(null); // center on screen
         loginFrame.setVisible(true);
     }
 
-    // --- Connect to Server ---
+    // --- CONNECT TO SERVER ---
     private void connectToServer(String username, String password) throws Exception {
         Socket socket = new Socket(SERVER_IP, SERVER_PORT);
         out = new ObjectOutputStream(socket.getOutputStream());
         in = new ObjectInputStream(socket.getInputStream());
 
-        // Authentication
+        // authentication
         in.readObject(); // "Enter username:"
         out.writeObject(username);
         in.readObject(); // "Enter password:"
         out.writeObject(password);
-        in.readObject(); // Auth message
+        in.readObject(); // auth success message
     }
 
-    // --- Exam GUI ---
+    // --- EXAM GUI ---
     private void createExamUI() {
-        frame = new JFrame("NetExam");
+        frame = new JFrame("TestSync");
         frame.setSize(500, 400);
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        frame.setLayout(new BorderLayout());
+        frame.setLayout(new BorderLayout(10, 10));
+
+        timerLabel = new JLabel("Time Left: --", SwingConstants.CENTER);
+        timerLabel.setFont(new Font("Arial", Font.BOLD, 16));
+        timerLabel.setForeground(Color.RED);
+        frame.add(timerLabel, BorderLayout.NORTH);
 
         questionArea = new JTextArea();
         questionArea.setLineWrap(true);
         questionArea.setWrapStyleWord(true);
         questionArea.setEditable(false);
         questionArea.setFont(new Font("Arial", Font.PLAIN, 16));
+        frame.add(questionArea, BorderLayout.CENTER);
 
         JPanel optionsPanel = new JPanel();
-        optionsPanel.setLayout(new GridLayout(4, 1));
+        optionsPanel.setLayout(new GridLayout(4, 1, 5, 5));
         optionButtons = new JRadioButton[4];
         group = new ButtonGroup();
         for (int i = 0; i < 4; i++) {
@@ -102,25 +108,18 @@ public class StudentClient {
             group.add(optionButtons[i]);
             optionsPanel.add(optionButtons[i]);
         }
+        frame.add(optionsPanel, BorderLayout.SOUTH);
 
         submitButton = new JButton("Submit Answer");
         submitButton.addActionListener(e -> submitAnswer());
-
-        timerLabel = new JLabel("Time Left: --", SwingConstants.CENTER);
-        timerLabel.setFont(new Font("Arial", Font.BOLD, 16));
-        timerLabel.setForeground(Color.RED);
-
-        frame.add(timerLabel, BorderLayout.NORTH);
-        frame.add(questionArea, BorderLayout.CENTER);
-        frame.add(optionsPanel, BorderLayout.SOUTH);
         frame.add(submitButton, BorderLayout.EAST);
 
+        frame.setLocationRelativeTo(null); // center on screen
         frame.setVisible(true);
 
         loadNextQuestion();
     }
 
-    // --- Load Next Question ---
     private void loadNextQuestion() {
         try {
             Object obj = in.readObject();
@@ -141,12 +140,11 @@ public class StudentClient {
         }
     }
 
-    // --- Submit Answer ---
     private void submitAnswer() {
         int selected = -1;
         for (int i = 0; i < optionButtons.length; i++) {
             if (optionButtons[i].isSelected()) {
-                selected = i + 1; // Option numbers start from 1
+                selected = i + 1; // option numbers start from 1
             }
         }
         if (selected == -1) {

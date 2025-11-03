@@ -12,6 +12,7 @@ public class ResultManager {
     }
 
     public static void printAllResults() {
+        System.out.println("\n----- All Exam Results -----");
         for (String user : results.keySet()) {
             System.out.println("Results for " + user + ":");
             results.get(user).forEach((q, ans) ->

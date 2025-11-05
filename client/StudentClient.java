@@ -31,6 +31,7 @@ public class StudentClient {
     }
 
     // --- LOGIN SCREEN ---
+    
     private void showLogin() {
         JFrame loginFrame = new JFrame("TestSync - Login");
         loginFrame.setSize(350, 220);

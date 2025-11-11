@@ -66,6 +66,7 @@ public class TimerBroadcaster {
             System.out.println("\n⏰ Countdown finished! Exam time ended.");
             
         } catch (Exception e) {
+            System.err.println("Error: " + e.getMessage());
             e.printStackTrace();
         }
     }

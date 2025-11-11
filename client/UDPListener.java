@@ -1,10 +1,17 @@
 package client;
 
 import java.net.*;
+import java.nio.ByteBuffer;
+import java.nio.channels.DatagramChannel;
+import java.nio.charset.StandardCharsets;
 import javax.swing.JLabel;
 import javax.swing.SwingUtilities;
 import javax.swing.JOptionPane;
 
+/**
+ * UDPListener using Java NIO (DatagramChannel + ByteBuffer)
+ * Demonstrates non-blocking I/O for receiving UDP broadcasts
+ */
 public class UDPListener {
     private static Runnable onExamFinished = null;
     
@@ -13,17 +20,28 @@ public class UDPListener {
     }
     
     public static void listen(int port, JLabel timerLabel) {
-        try (DatagramSocket socket = new DatagramSocket(port)) {
-            socket.setSoTimeout(2000); // 2 second timeout to update "Waiting..." message
-            byte[] buffer = new byte[1024];
+        try (DatagramChannel channel = DatagramChannel.open()) {
+            channel.socket().bind(new InetSocketAddress(port));
+            channel.configureBlocking(false); // Non-blocking mode
+            
+            ByteBuffer buffer = ByteBuffer.allocate(1024);
             boolean receivedFirstPacket = false;
+            int noDataCounter = 0;
+            
+            System.out.println("📡 NIO DatagramChannel listening on port " + port + " (non-blocking)");
             
             while (true) {
-                try {
-                    DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
-                    socket.receive(packet);
-                    String msg = new String(packet.getData(), 0, packet.getLength());
+                buffer.clear();
+                SocketAddress sender = channel.receive(buffer);
+                
+                if (sender != null) {
+                    // Data received
+                    buffer.flip();
+                    byte[] data = new byte[buffer.remaining()];
+                    buffer.get(data);
+                    String msg = new String(data, StandardCharsets.UTF_8);
                     receivedFirstPacket = true;
+                    noDataCounter = 0;
                     
                     // Check for exam finished signal
                     if (msg.equals("EXAM_FINISHED")) {
@@ -47,13 +65,20 @@ public class UDPListener {
                         String finalMsg = msg;
                         SwingUtilities.invokeLater(() -> timerLabel.setText(finalMsg));
                     }
-                } catch (SocketTimeoutException e) {
-                    // No packet received - show waiting message
-                    if (!receivedFirstPacket && timerLabel != null) {
+                } else {
+                    // No data received (non-blocking mode)
+                    noDataCounter++;
+                    
+                    // Show waiting message if no data for 20 iterations (~2 seconds)
+                    if (!receivedFirstPacket && noDataCounter > 20 && timerLabel != null) {
                         SwingUtilities.invokeLater(() -> 
                             timerLabel.setText("Timer: Waiting for broadcast...")
                         );
+                        noDataCounter = 0; // Reset counter
                     }
+                    
+                    // Small sleep to prevent busy waiting in non-blocking mode
+                    Thread.sleep(100);
                 }
             }
         } catch (Exception e) {

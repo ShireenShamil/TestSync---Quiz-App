@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TestSync - Exam Control Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .dashboard {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            transition: transform 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+        }
+
+        .card h2 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            font-weight: bold;
+        }
+
+        .status-waiting {
+            background: #ffa726;
+            color: white;
+        }
+
+        .status-active {
+            background: #66bb6a;
+            color: white;
+        }
+
+        .status-ended {
+            background: #ef5350;
+            color: white;
+        }
+
+        .stat {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .stat:last-child {
+            border-bottom: none;
+        }
+
+        .stat-label {
+            color: #666;
+            font-size: 0.95em;
+        }
+
+        .stat-value {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .controls {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .controls h2 {
+            color: #667eea;
+            margin-bottom: 20px;
+            font-size: 1.3em;
+        }
+
+        .button-group {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        button {
+            padding: 15px 25px;
+            border: none;
+            border-radius: 10px;
+            font-size: 1em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .btn-start {
+            background: #66bb6a;
+            color: white;
+        }
+
+        .btn-start:hover {
+            background: #58a85c;
+        }
+
+        .btn-stop {
+            background: #ef5350;
+            color: white;
+        }
+
+        .btn-stop:hover {
+            background: #e53935;
+        }
+
+        .btn-refresh {
+            background: #42a5f5;
+            color: white;
+        }
+
+        .btn-refresh:hover {
+            background: #1e88e5;
+        }
+
+        .btn-results {
+            background: #ab47bc;
+            color: white;
+        }
+
+        .btn-results:hover {
+            background: #8e24aa;
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        button:disabled:hover {
+            transform: none;
+            box-shadow: none;
+        }
+
+        .logs {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            margin-top: 20px;
+        }
+
+        .logs h2 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+        }
+
+        .log-container {
+            background: #1e1e1e;
+            color: #00ff00;
+            padding: 15px;
+            border-radius: 8px;
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+        }
+
+        .log-entry {
+            margin-bottom: 5px;
+            padding: 5px;
+            border-left: 3px solid #667eea;
+            padding-left: 10px;
+        }
+
+        .timestamp {
+            color: #888;
+            margin-right: 10px;
+        }
+
+        .icon {
+            font-size: 1.2em;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+
+        .footer {
+            text-align: center;
+            color: white;
+            margin-top: 30px;
+            opacity: 0.8;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎓 TestSync Exam Control Dashboard</h1>
+            <p>Manage and monitor your exam in real-time</p>
+        </div>
+
+        <div class="dashboard">
+            <div class="card">
+                <h2><span class="icon">📊</span> Exam Status</h2>
+                <div class="stat">
+                    <span class="stat-label">Current State</span>
+                    <span class="status-badge status-waiting" id="examStatus">Waiting</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-label">Last Updated</span>
+                    <span class="stat-value" style="font-size: 0.9em;" id="lastUpdate">--</span>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2><span class="icon">👥</span> Students</h2>
+                <div class="stat">
+                    <span class="stat-label">Total Registered</span>
+                    <span class="stat-value" id="totalStudents">20</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-label">Connected & Waiting</span>
+                    <span class="stat-value" id="connectedStudents">0</span>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2><span class="icon">⏱️</span> Timer Info</h2>
+                <div class="stat">
+                    <span class="stat-label">Exam Duration</span>
+                    <span class="stat-value">60</span>
+                    <span style="color: #999; font-size: 0.9em;">sec</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-label">Questions</span>
+                    <span class="stat-value">3</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <h2><span class="icon">🎮</span> Exam Controls</h2>
+            <div class="button-group">
+                <button class="btn-start" onclick="startExam()">
+                    <span>▶️</span> Start Exam
+                </button>
+                <button class="btn-stop" onclick="stopExam()" disabled>
+                    <span>⏹️</span> Stop Exam
+                </button>
+                <button class="btn-refresh" onclick="refreshStatus()">
+                    <span>🔄</span> Refresh Status
+                </button>
+                <button class="btn-results" onclick="viewResults()">
+                    <span>📈</span> View Results
+                </button>
+            </div>
+        </div>
+
+        <div class="logs">
+            <h2><span class="icon">📝</span> Activity Log</h2>
+            <div class="log-container" id="logContainer">
+                <div class="log-entry">
+                    <span class="timestamp">[System]</span>
+                    <span>Dashboard initialized. Ready to manage exam.</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>TestSync Quiz Application | REST API Dashboard</p>
+            <p style="font-size: 0.8em; margin-top: 5px;">
+                API: http://localhost:8080 | Using Java NIO & HTTP REST
+            </p>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8080';
+        let autoRefreshInterval;
+
+        function log(message, type = 'info') {
+            const logContainer = document.getElementById('logContainer');
+            const timestamp = new Date().toLocaleTimeString();
+            const entry = document.createElement('div');
+            entry.className = 'log-entry';
+            
+            let icon = '📌';
+            if (type === 'success') icon = '✅';
+            if (type === 'error') icon = '❌';
+            if (type === 'warning') icon = '⚠️';
+            
+            entry.innerHTML = `<span class="timestamp">[${timestamp}]</span><span>${icon} ${message}</span>`;
+            logContainer.appendChild(entry);
+            logContainer.scrollTop = logContainer.scrollHeight;
+        }
+
+        async function fetchAPI(endpoint, method = 'GET') {
+            try {
+                const response = await fetch(`${API_BASE}${endpoint}`, {
+                    method: method,
+                    mode: 'cors',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const text = await response.text();
+                return text ? JSON.parse(text) : null;
+            } catch (error) {
+                log(`API Error: ${error.message}`, 'error');
+                console.error('Fetch error:', error);
+                return null;
+            }
+        }
+
+        async function refreshStatus() {
+            log('Fetching exam status...', 'info');
+            
+            // Get exam status
+            const status = await fetchAPI('/api/status');
+            if (status) {
+                const examStatusEl = document.getElementById('examStatus');
+                const lastUpdateEl = document.getElementById('lastUpdate');
+                
+                examStatusEl.textContent = status.examStarted ? 'Active' : 'Waiting';
+                examStatusEl.className = 'status-badge ' + (status.examStarted ? 'status-active' : 'status-waiting');
+                
+                lastUpdateEl.textContent = new Date().toLocaleTimeString();
+                
+                log(`Status updated: Exam ${status.examStarted ? 'ACTIVE' : 'WAITING'}`, 'success');
+            }
+            
+            // Get students
+            const students = await fetchAPI('/api/students');
+            if (students) {
+                document.getElementById('totalStudents').textContent = students.totalStudents;
+                document.getElementById('connectedStudents').textContent = students.connectedStudents;
+                log(`${students.connectedStudents} student(s) connected`, 'info');
+            }
+        }
+
+        async function startExam() {
+            log('Starting exam...', 'warning');
+            console.log('Calling POST /api/exam/start');
+            
+            const result = await fetchAPI('/api/exam/start', 'POST');
+            console.log('Start exam result:', result);
+            
+            if (result && result.status === 'success') {
+                log('✅ Exam started successfully! 🚀', 'success');
+                setTimeout(refreshStatus, 500);
+            } else if (result && result.message) {
+                log(result.message, 'warning');
+            } else {
+                log('Failed to start exam', 'error');
+            }
+        }
+
+        async function stopExam() {
+            log('Stopping exam...', 'warning');
+            const result = await fetchAPI('/api/exam/stop', 'POST');
+            
+            if (result) {
+                log('Stop exam requested', 'info');
+                setTimeout(refreshStatus, 500);
+            }
+        }
+
+        async function viewResults() {
+            log('Fetching results...', 'info');
+            const results = await fetchAPI('/api/results');
+            
+            if (results) {
+                log('Results retrieved successfully', 'success');
+                alert(JSON.stringify(results, null, 2));
+            }
+        }
+
+        // Auto-refresh every 3 seconds
+        function startAutoRefresh() {
+            autoRefreshInterval = setInterval(refreshStatus, 3000);
+            log('Auto-refresh enabled (3s interval)', 'info');
+        }
+
+        // Initial load
+        window.onload = function() {
+            log('Dashboard loaded successfully', 'success');
+            refreshStatus();
+            startAutoRefresh();
+        };
+    </script>
+</body>
+</html>

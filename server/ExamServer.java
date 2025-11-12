@@ -26,6 +26,7 @@ public class ExamServer {
                 String command = scanner.nextLine().trim().toUpperCase();
                 if (command.equals("START") && !examStarted) {
                     examStarted = true;
+                    ExamState.setState("RUNNING");
                     System.out.println("\n🚀 EXAM STARTED! Notifying " + waitingClients.size() + " connected student(s)...\n");
                     notifyAllClients();
                     break;
@@ -101,12 +102,13 @@ public class ExamServer {
                 
                 out.writeObject("Authentication successful!");
                 
-                // Add to waiting list and send waiting status
+                // Add to waiting list and track connected students
                 waitingClients.add(this);
+                ExamState.incrementConnectedStudents();
                 out.writeObject("WAITING"); // Signal client to show waiting screen
                 out.flush();
                 
-                System.out.println("👤 " + username + " connected and waiting for exam to start...");
+                System.out.println("👤 " + username + " connected and waiting for exam to start... (Total connected: " + ExamState.getConnectedStudents() + ")");
                 
                 // Wait until exam starts
                 synchronized (this) {
@@ -137,9 +139,11 @@ public class ExamServer {
             } catch (EOFException | SocketException e) {
                 // Client disconnected (possibly due to time expiry) - this is normal
                 System.out.println("⏰ " + username + " disconnected (exam time may have expired)");
+                ExamState.decrementConnectedStudents();
             } catch (Exception e) {
                 System.err.println("Error handling client " + username + ": " + e.getMessage());
                 e.printStackTrace();
+                ExamState.decrementConnectedStudents();
             }
         }
     }

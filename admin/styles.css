@@ -1,0 +1,28 @@
+/* Simple styles inspired by the screenshot */
+:root{
+  --bg:#6a5de8;
+  --card:#ffffff;
+  --muted:#8a8fa6;
+  --accent:#4fc08d;
+}
+html,body{height:100%;margin:0;font-family:Segoe UI, Roboto, Arial, sans-serif;background:linear-gradient(135deg,#6a5de8 0%,#8a66d9 100%);color:#222}
+.header{padding:24px}
+.top{padding:32px 20px 8px;text-align:center;color:white}
+.top h1{margin:0;font-size:32px}
+.top .subtitle{margin:6px 0 0;opacity:0.95}
+.container{max-width:980px;margin:18px auto;padding:20px}
+.cards{display:flex;gap:18px}
+.card{background:var(--card);border-radius:10px;padding:18px;flex:1;box-shadow:0 6px 20px rgba(0,0,0,0.12)}
+.card h3{color:#3a2c7a;margin:0 0 8px}
+.card-body{font-size:14px}
+.value{font-size:22px;font-weight:700;color:#26448b;margin-top:6px}
+.muted{color:var(--muted);font-size:13px;margin-top:8px}
+.controls{margin:18px 0;display:flex;gap:12px;align-items:center}
+.btn{padding:12px 18px;border-radius:8px;border:none;color:white;cursor:pointer;box-shadow:0 4px 8px rgba(0,0,0,0.12)}
+.btn.green{background:#2fb46b}
+.btn.red{background:#f08a8a}
+.btn.blue{background:#31a2ff}
+.btn.purple{background:#8b4cff}
+.activity{background:var(--card);border-radius:10px;padding:12px;box-shadow:0 6px 20px rgba(0,0,0,0.12)}
+.log{background:#0f1720;color:#9be58f;padding:12px;border-radius:6px;height:180px;overflow:auto}
+@media(max-width:820px){.cards{flex-direction:column}}

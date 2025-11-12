@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>TestSync Exam Control Dashboard</title>
+  <link rel="stylesheet" href="/admin/styles.css" />
+</head>
+<body>
+  <header class="top">
+    <h1>TestSync Exam Control Dashboard</h1>
+    <p class="subtitle">Manage and monitor your exam in real-time</p>
+  </header>
+
+  <main class="container">
+    <section class="cards">
+      <div class="card">
+        <h3>Exam Status</h3>
+        <div class="card-body">
+          <div>Current State</div>
+          <div class="value" id="state">Waiting</div>
+          <div class="muted">Last Updated: <span id="lastUpdated">--</span></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Students</h3>
+        <div class="card-body">
+          <div>Total Registered</div>
+          <div class="value" id="totalRegistered">0</div>
+          <div class="muted">Connected &amp; Waiting: <span id="connectedWaiting">0</span></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Timer Info</h3>
+        <div class="card-body">
+          <div>Exam Duration</div>
+          <div class="value" id="examDuration">60</div>
+          <div class="muted">Questions: <span id="questionsCount">3</span></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="controls">
+      <button id="startBtn" class="btn green">Start Exam</button>
+      <button id="stopBtn" class="btn red">Stop Exam</button>
+      <button id="refreshBtn" class="btn blue">Refresh Status</button>
+      <button id="resultsBtn" class="btn purple">View Results</button>
+    </section>
+
+    <section class="activity">
+      <h3>Activity Log</h3>
+      <pre id="log" class="log">[--] Activity log started...</pre>
+    </section>
+  </main>
+
+  <script src="/admin/dashboard.js"></script>
+</body>
+</html>

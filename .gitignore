@@ -40,3 +40,11 @@ build/
 *.swp
 *.swo
 *~
+
+# Exam state runtime files
+exam_state.txt
+sources.txt
+
+# Batch file logs
+*.log
+

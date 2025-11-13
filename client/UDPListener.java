@@ -13,8 +13,12 @@ public class UDPListener {
     }
     
     public static void listen(int port, JLabel timerLabel) {
-        try (DatagramSocket socket = new DatagramSocket(port)) {
+        try {
+            DatagramSocket socket = new DatagramSocket(null); // Create unbound socket
+            socket.setReuseAddress(true);
+            socket.bind(new InetSocketAddress("0.0.0.0", port)); // Bind to all interfaces
             socket.setSoTimeout(2000); // 2 second timeout to update "Waiting..." message
+            
             byte[] buffer = new byte[1024];
             boolean receivedFirstPacket = false;
             

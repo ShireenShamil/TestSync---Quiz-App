@@ -286,18 +286,24 @@ public class StudentClient {
     private void loadNextQuestion() {
         try {
             Object obj = in.readObject();
+            
+            // Check if exam is completed
             if (obj instanceof String msg) {
+                System.out.println("[StudentClient] Received message: " + msg);
                 if (msg.startsWith("RESULT:")) {
+                    System.out.println("[StudentClient] Received result: " + msg);
                     showResult(msg);
                     frame.dispose();
                     return;
                 }
-                JOptionPane.showMessageDialog(frame, msg);
+                // Other messages (e.g. confirmation)
+                System.out.println("[StudentClient] Message from server: " + msg);
                 return;
             }
 
             currentQuestion = (Question) obj;
             totalQuestions++;
+            System.out.println("[StudentClient] Loaded question " + totalQuestions);
             questionArea.setText(currentQuestion.getQuestionText());
             String[] opts = currentQuestion.getOptions();
 
@@ -309,6 +315,7 @@ public class StudentClient {
             questionCountLabel.setText("Question: " + totalQuestions);
 
         } catch (Exception e) {
+            System.err.println("[StudentClient] Error loading question: " + e.getMessage());
             e.printStackTrace();
         }
     }
@@ -326,10 +333,13 @@ public class StudentClient {
         }
 
         try {
+            System.out.println("[StudentClient] Submitting answer: " + selected);
             out.writeInt(selected);
             out.flush();
+            System.out.println("[StudentClient] Answer sent, loading next question...");
             loadNextQuestion();
         } catch (IOException e) {
+            System.err.println("[StudentClient] Error sending answer: " + e.getMessage());
             e.printStackTrace();
         }
     }

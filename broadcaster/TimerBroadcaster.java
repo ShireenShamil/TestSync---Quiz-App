@@ -40,17 +40,24 @@ public class TimerBroadcaster {
             }
         }
         
-        // Start countdown
+        // Start countdown - use multicast instead of broadcast for better reliability
         try (DatagramSocket socket = new DatagramSocket()) {
+            socket.setBroadcast(true);
+            socket.setReuseAddress(true);
             int countdown = 60; // 60 seconds exam duration
             while (countdown >= 0) {
                 String msg = "Time left: " + countdown + " sec";
                 byte[] buffer = msg.getBytes();
-                InetAddress address = InetAddress.getByName("255.255.255.255"); // Broadcast
-                DatagramPacket packet = new DatagramPacket(buffer, buffer.length, address, UDP_PORT);
-                socket.send(packet);
-
-                System.out.println("Broadcasting: " + msg);
+                
+                // Send to broadcast address - will reach all clients on the network
+                try {
+                    InetAddress broadcast = InetAddress.getByName("255.255.255.255");
+                    DatagramPacket packet = new DatagramPacket(buffer, buffer.length, broadcast, UDP_PORT);
+                    socket.send(packet);
+                    System.out.println("Broadcasting: " + msg);
+                } catch (Exception e) {
+                    System.err.println("Failed to broadcast: " + e.getMessage());
+                }
 
                 Thread.sleep(1000);
                 countdown--;
@@ -59,9 +66,12 @@ public class TimerBroadcaster {
             // Send EXAM_FINISHED signal
             String finishMsg = "EXAM_FINISHED";
             byte[] finishBuffer = finishMsg.getBytes();
-            InetAddress address = InetAddress.getByName("255.255.255.255");
-            DatagramPacket finishPacket = new DatagramPacket(finishBuffer, finishBuffer.length, address, UDP_PORT);
-            socket.send(finishPacket);
+            try {
+                InetAddress broadcast = InetAddress.getByName("255.255.255.255");
+                DatagramPacket finishPacket = new DatagramPacket(finishBuffer, finishBuffer.length, broadcast, UDP_PORT);
+                socket.send(finishPacket);
+                System.out.println("Broadcasting: EXAM_FINISHED");
+            } catch (Exception e) {}
             
             System.out.println("\n⏰ Countdown finished! Exam time ended.");
             

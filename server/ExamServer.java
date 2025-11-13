@@ -11,6 +11,16 @@ public class ExamServer {
     private static ExecutorService pool = Executors.newFixedThreadPool(10);
     private static volatile boolean examStarted = false;
     private static List<ClientHandler> waitingClients = Collections.synchronizedList(new ArrayList<>());
+    
+    // Public method to programmatically start the exam (called from AdminHTTPServer)
+    public static synchronized void startExamProgrammatically() {
+        if (!examStarted) {
+            examStarted = true;
+            ExamState.setState("RUNNING");
+            System.out.println("\n🚀 EXAM STARTED (via Admin Dashboard)! Notifying " + waitingClients.size() + " connected student(s)...\n");
+            notifyAllClients();
+        }
+    }
 
     public static void main(String[] args) throws IOException {
         // Sample questions
@@ -127,14 +137,33 @@ public class ExamServer {
                 System.out.println("📝 Sending questions to " + username);
 
                 // Send questions
-                for (Question q : questions) {
+                for (int q_num = 0; q_num < questions.size(); q_num++) {
+                    Question q = questions.get(q_num);
+                    System.out.println("[ExamServer] Sending question " + (q_num + 1) + " to " + username);
                     out.writeObject(q);
-                    int answer = in.readInt();
-                    ResultManager.submitAnswer(username, q, answer);
+                    out.flush();
+                    
+                    try {
+                        int answer = in.readInt();
+                        System.out.println("[ExamServer] Received answer from " + username + ": " + answer);
+                        ResultManager.submitAnswer(username, q, answer);
+                    } catch (EOFException e) {
+                        System.out.println("[ExamServer] " + username + " disconnected while answering questions");
+                        ExamState.decrementConnectedStudents();
+                        return;
+                    }
                 }
 
+                // compute score and send to client
+                int score = ResultManager.calculateScore(username, questions);
+                out.writeObject("RESULT:" + score);
+                out.flush();
+
                 out.writeObject("Exam completed! Thank you.");
+                out.flush();
+                System.out.println("[ExamServer] Exam completed for " + username + " (score=" + score + "%)");
                 ResultManager.printAllResults();
+                ExamState.decrementConnectedStudents();
                 socket.close();
             } catch (EOFException | SocketException e) {
                 // Client disconnected (possibly due to time expiry) - this is normal

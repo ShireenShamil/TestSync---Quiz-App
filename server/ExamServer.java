@@ -2,15 +2,20 @@ package server;
 
 import java.io.*;
 import java.net.*;
+import java.nio.ByteBuffer;
+import java.nio.channels.DatagramChannel;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.*;
 
 public class ExamServer {
     private static final int PORT = 12345;
     private static List<Question> questions = new ArrayList<>();
+    private static Set<String> loggedInUsers = Collections.synchronizedSet(new HashSet<>());
     private static ExecutorService pool = Executors.newFixedThreadPool(10);
     private static volatile boolean examStarted = false;
     private static List<ClientHandler> waitingClients = Collections.synchronizedList(new ArrayList<>());
+    private static volatile int totalConnectedStudents = 0;  // Track total students
 
     public static void main(String[] args) throws IOException {
         // Sample questions
@@ -50,18 +55,49 @@ public class ExamServer {
         }
         waitingClients.clear();
         
-        // Broadcast START signal to TimerBroadcaster via UDP
-        try {
-            DatagramSocket udpSocket = new DatagramSocket();
+        // Broadcast START signal to TimerBroadcaster via UDP using NIO
+        try (DatagramChannel channel = DatagramChannel.open()) {
             String startSignal = "START_EXAM";
-            byte[] buffer = startSignal.getBytes();
-            InetAddress address = InetAddress.getByName("localhost");
-            DatagramPacket packet = new DatagramPacket(buffer, buffer.length, address, 9877);
-            udpSocket.send(packet);
-            udpSocket.close();
-            System.out.println("📡 START signal sent to TimerBroadcaster");
+            ByteBuffer buffer = ByteBuffer.wrap(startSignal.getBytes(StandardCharsets.UTF_8));
+            InetSocketAddress address = new InetSocketAddress("localhost", 9877);
+            channel.send(buffer, address);
+            System.out.println("📡 START signal sent to TimerBroadcaster (via NIO DatagramChannel)");
         } catch (Exception e) {
             System.err.println("⚠️ Warning: Could not send START signal to broadcaster: " + e.getMessage());
+        }
+    }
+    
+    // Public API methods for HTTP REST server integration
+    public static boolean isExamStarted() {
+        return examStarted;
+    }
+    
+    public static int getWaitingClientsCount() {
+        if (!examStarted) {
+            return waitingClients.size();  // Before exam starts
+        } else {
+            return totalConnectedStudents;  // After exam starts, show total
+        }
+    }
+
+    public static Set<String> getLoggedInUsers() {
+        return new HashSet<>(loggedInUsers);
+    }
+
+    public static synchronized void addQuestion(Question q) {
+        questions.add(q);
+        System.out.println("➕ New question added: " + q.getQuestionText());
+    }
+
+    public static Map<String, Integer> getAllScores() {
+        return ResultManager.getAllScores();
+    }
+    
+    public static void startExamViaAPI() {
+        if (!examStarted) {
+            examStarted = true;
+            System.out.println("\n🚀 EXAM STARTED via REST API! Notifying " + waitingClients.size() + " connected student(s)...\n");
+            notifyAllClients();
         }
     }
 
@@ -100,9 +136,14 @@ public class ExamServer {
                 }
                 
                 out.writeObject("Authentication successful!");
+                out.flush();
+
+                // track logged in user
+                loggedInUsers.add(username);
                 
                 // Add to waiting list and send waiting status
                 waitingClients.add(this);
+                totalConnectedStudents++;  // Increment total count
                 out.writeObject("WAITING"); // Signal client to show waiting screen
                 out.flush();
                 
@@ -131,7 +172,13 @@ public class ExamServer {
                     ResultManager.submitAnswer(username, q, answer);
                 }
 
-                out.writeObject("Exam completed! Thank you.");
+                // Compute score and send result to client immediately
+                int score = ResultManager.computeScore(username);
+                out.writeObject("RESULT:" + score);
+                out.flush();
+
+                // Optionally log and print all results on server
+                System.out.println("✅ " + username + " submitted. Score: " + score + "%");
                 ResultManager.printAllResults();
                 socket.close();
             } catch (EOFException | SocketException e) {

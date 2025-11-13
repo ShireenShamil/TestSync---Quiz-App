@@ -14,6 +14,7 @@ public class StudentClient {
     private static final int UDP_PORT = 9876;
 
     private JFrame frame;
+    private JFrame waitingFrame;  // Add reference to waiting frame
     private JTextArea questionArea;
     private JRadioButton[] optionButtons;
     private ButtonGroup group;
@@ -129,6 +130,13 @@ public class StudentClient {
                     if (startSignal.equals("START")) {
                         SwingUtilities.invokeLater(() -> {
                             examStarted = true;
+                            
+                            // Close waiting frame
+                            if (waitingFrame != null) {
+                                waitingFrame.dispose();
+                            }
+                            
+                            // Create exam UI and load first question
                             createExamUI();
                             loadNextQuestion();
                         });
@@ -142,7 +150,7 @@ public class StudentClient {
 
     // --- WAITING SCREEN ---
     private void showWaitingScreen() {
-        JFrame waitingFrame = new JFrame("🕐 TestSync - Please Wait");
+        waitingFrame = new JFrame("🕐 TestSync - Please Wait");
         waitingFrame.setSize(500, 350);
         waitingFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         waitingFrame.setLayout(new BorderLayout());

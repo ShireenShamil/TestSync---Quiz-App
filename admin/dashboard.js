@@ -37,13 +37,16 @@
         if(!resultsData.submissions || resultsData.submissions.length === 0){
           logText += 'No results submitted yet.';
         }else{
+          logText += `Total Submissions: ${resultsData.totalSubmissions}\n\n`;
           for(const sub of resultsData.submissions){
-            logText += `${sub.student}:\n`;
+            logText += `>>> ${sub.student}: ${sub.scorePercent}%\n`;
             for(const ans of sub.answers){
-              logText += `  Q: ${ans.question} => Answer: ${ans.answer}\n`;
+              const mark = ans.correct ? '[OK]' : '[XX]';
+              logText += `    ${mark} Q: ${ans.question}\n`;
+              logText += `         Answer: ${ans.answer}\n`;
             }
+            logText += '\n';
           }
-          logText += `Total Submissions: ${resultsData.totalSubmissions}`;
         }
         appendLog(logText);
       }
@@ -55,15 +58,33 @@
   refreshBtn.addEventListener('click', fetchAndUpdate);
   resultsBtn.addEventListener('click', fetchAndUpdate);
 
-  startBtn.addEventListener('click', ()=>{
-    document.getElementById('state').textContent = 'Running';
-    appendLog('Exam started (UI only - use ExamServer console to type START)');
-    document.getElementById('lastUpdated').textContent = new Date().toLocaleString();
+  startBtn.addEventListener('click', async ()=>{
+    try {
+      const res = await fetch('/api/start', { method: 'POST' });
+      if(res.ok){
+        document.getElementById('state').textContent = 'Running';
+        appendLog('✓ Exam started successfully!');
+        document.getElementById('lastUpdated').textContent = new Date().toLocaleString();
+      } else {
+        appendLog('✗ Failed to start exam');
+      }
+    } catch(err) {
+      appendLog('✗ Error starting exam: ' + err.message);
+    }
   });
-  stopBtn.addEventListener('click', ()=>{
-    document.getElementById('state').textContent = "Stopped";
-    appendLog('Exam stopped (UI only)');
-    document.getElementById('lastUpdated').textContent = new Date().toLocaleString();
+  stopBtn.addEventListener('click', async ()=>{
+    try {
+      const res = await fetch('/api/stop', { method: 'POST' });
+      if(res.ok){
+        document.getElementById('state').textContent = "Stopped";
+        appendLog('✓ Exam stopped successfully!');
+        document.getElementById('lastUpdated').textContent = new Date().toLocaleString();
+      } else {
+        appendLog('✗ Failed to stop exam');
+      }
+    } catch(err) {
+      appendLog('✗ Error stopping exam: ' + err.message);
+    }
   });
 
   // initial poll

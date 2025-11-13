@@ -61,34 +61,34 @@ public class TimerBroadcaster {
             }
         }
         
-        // Start countdown using NIO DatagramChannel
-        try (DatagramChannel channel = DatagramChannel.open()) {
-            channel.socket().setBroadcast(true); // Enable broadcast
-            InetSocketAddress broadcastAddress = new InetSocketAddress("255.255.255.255", UDP_PORT);
-            
-            System.out.println("📡 Broadcasting via NIO DatagramChannel on port " + UDP_PORT);
-            
+        // Start countdown using MulticastSocket so multiple clients can receive updates
+        try (MulticastSocket mcastSocket = new MulticastSocket()) {
+            InetAddress group = InetAddress.getByName("230.0.0.0");
+            mcastSocket.setTimeToLive(1); // Keep multicast local
+
+            System.out.println("📡 Broadcasting via MulticastSocket on group 230.0.0.0:" + UDP_PORT);
+
             int countdown = 60; // 60 seconds exam duration
             while (countdown >= 0) {
                 String msg = "Time left: " + countdown + " sec";
-                
-                // Use ByteBuffer (NIO way)
-                ByteBuffer buffer = ByteBuffer.wrap(msg.getBytes(StandardCharsets.UTF_8));
-                channel.send(buffer, broadcastAddress);
+                byte[] buf = msg.getBytes(StandardCharsets.UTF_8);
+                DatagramPacket packet = new DatagramPacket(buf, buf.length, group, UDP_PORT);
+                mcastSocket.send(packet);
 
-                System.out.println("Broadcasting (NIO): " + msg);
+                System.out.println("Broadcasting: " + msg);
 
                 Thread.sleep(1000);
                 countdown--;
             }
-            
+
             // Send EXAM_FINISHED signal
             String finishMsg = "EXAM_FINISHED";
-            ByteBuffer finishBuffer = ByteBuffer.wrap(finishMsg.getBytes(StandardCharsets.UTF_8));
-            channel.send(finishBuffer, broadcastAddress);
-            
+            byte[] finishBuf = finishMsg.getBytes(StandardCharsets.UTF_8);
+            DatagramPacket finishPacket = new DatagramPacket(finishBuf, finishBuf.length, group, UDP_PORT);
+            mcastSocket.send(finishPacket);
+
             System.out.println("\n⏰ Countdown finished! Exam time ended.");
-            
+
         } catch (Exception e) {
             e.printStackTrace();
         }

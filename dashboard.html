@@ -289,6 +289,20 @@
                 </div>
             </div>
 
+            <div class="card" id="loggedUsersCard">
+                <h2><span class="icon">🧑‍💻</span> Logged-in Users</h2>
+                <div id="loggedUsersList" style="margin-top:10px;">
+                    <div class="stat"><span class="stat-label">No users logged in</span></div>
+                </div>
+            </div>
+            
+            <div class="card" id="resultsSummaryCard">
+                <h2><span class="icon">🏆</span> Results Summary</h2>
+                <div id="resultsSummary" style="margin-top:10px;">
+                    <div class="stat"><span class="stat-label">No results yet</span></div>
+                </div>
+            </div>
+
             <div class="card">
                 <h2><span class="icon">⏱️</span> Timer Info</h2>
                 <div class="stat">
@@ -319,6 +333,21 @@
                     <span>📈</span> View Results
                 </button>
             </div>
+
+            <div style="margin-top:20px;">
+                <h3 style="color:#667eea;">Add Question</h3>
+                <div style="display:flex;flex-direction:column;gap:8px;margin-top:10px;">
+                    <input id="qText" placeholder="Question text" style="padding:8px;border-radius:6px;border:1px solid #ddd;" />
+                    <input id="opt1" placeholder="Option 1" style="padding:8px;border-radius:6px;border:1px solid #ddd;" />
+                    <input id="opt2" placeholder="Option 2" style="padding:8px;border-radius:6px;border:1px solid #ddd;" />
+                    <input id="opt3" placeholder="Option 3" style="padding:8px;border-radius:6px;border:1px solid #ddd;" />
+                    <input id="opt4" placeholder="Option 4" style="padding:8px;border-radius:6px;border:1px solid #ddd;" />
+                    <input id="correctOption" placeholder="Correct option index (1-4)" style="padding:8px;border-radius:6px;border:1px solid #ddd;" />
+                    <div>
+                        <button class="btn-start" onclick="submitQuestion()">➕ Add Question</button>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <div class="logs">
@@ -329,6 +358,13 @@
                     <span>Dashboard initialized. Ready to manage exam.</span>
                 </div>
             </div>
+        </div>
+
+        <!-- Scoreboard Modal (simple) -->
+        <div id="scoreboardModal" style="display:none; position:fixed; left:50%; top:50%; transform:translate(-50%,-50%); width:600px; max-width:95%; background:white; padding:20px; border-radius:12px; box-shadow:0 10px 30px rgba(0,0,0,0.3); z-index:1000;">
+            <h2 style="color:#667eea;">Scoreboard</h2>
+            <div id="scoreboardContent" style="max-height:400px; overflow:auto; margin-top:12px;"></div>
+            <div style="text-align:right; margin-top:12px;"><button onclick="closeScoreboard()" style="padding:8px 12px;border-radius:8px;background:#ef5350;color:white;border:none;">Close</button></div>
         </div>
 
         <div class="footer">
@@ -407,6 +443,10 @@
                 document.getElementById('connectedStudents').textContent = students.connectedStudents;
                 log(`${students.connectedStudents} student(s) connected`, 'info');
             }
+            // Update logged-in users list
+            fetchLoggedUsers();
+            // Update results summary
+            fetchResultsSummary();
         }
 
         async function startExam() {
@@ -439,10 +479,111 @@
         async function viewResults() {
             log('Fetching results...', 'info');
             const results = await fetchAPI('/api/results');
-            
-            if (results) {
+
+            if (results && results.results) {
                 log('Results retrieved successfully', 'success');
-                alert(JSON.stringify(results, null, 2));
+                renderScoreboard(results.results);
+            } else if (results && results.status === 'success') {
+                // fallback if result format differs
+                renderScoreboard([]);
+            }
+        }
+
+        function renderScoreboard(results) {
+            const container = document.getElementById('scoreboardContent');
+            container.innerHTML = '';
+            if (!results || results.length === 0) {
+                container.innerHTML = '<p>No results yet.</p>';
+            } else {
+                const table = document.createElement('table');
+                table.style.width = '100%';
+                table.style.borderCollapse = 'collapse';
+                results.forEach(r => {
+                    const tr = document.createElement('tr');
+                    tr.style.borderBottom = '1px solid #eee';
+                    const tdUser = document.createElement('td');
+                    tdUser.style.padding = '8px';
+                    tdUser.textContent = r.user || r.username || '';
+                    const tdScore = document.createElement('td');
+                    tdScore.style.padding = '8px';
+                    tdScore.style.textAlign = 'right';
+                    tdScore.textContent = (r.score !== undefined) ? (r.score + '%') : (r.value ? r.value + '%' : '');
+                    tr.appendChild(tdUser);
+                    tr.appendChild(tdScore);
+                    table.appendChild(tr);
+                });
+                container.appendChild(table);
+            }
+            document.getElementById('scoreboardModal').style.display = 'block';
+        }
+
+        function closeScoreboard() {
+            document.getElementById('scoreboardModal').style.display = 'none';
+        }
+
+        async function fetchLoggedUsers() {
+            const res = await fetchAPI('/api/logged');
+            if (res && res.users) {
+                const list = document.getElementById('loggedUsersList');
+                list.innerHTML = '';
+                // Update connected count display too
+                document.getElementById('connectedStudents').textContent = res.count || res.users.length;
+                res.users.forEach(u => {
+                    const div = document.createElement('div');
+                    div.className = 'stat';
+                    div.innerHTML = `<span class="stat-label">${u}</span><span style="color:#666">Logged</span>`;
+                    list.appendChild(div);
+                });
+            }
+        }
+
+        async function fetchResultsSummary() {
+            const res = await fetchAPI('/api/results');
+            const container = document.getElementById('resultsSummary');
+            container.innerHTML = '';
+            if (res && res.results && res.results.length > 0) {
+                // Show top 5 by score
+                const rows = res.results.slice().sort((a,b) => (b.score||0) - (a.score||0)).slice(0,5);
+                rows.forEach(r => {
+                    const div = document.createElement('div');
+                    div.className = 'stat';
+                    div.innerHTML = `<span class="stat-label">${r.user}</span><span class="stat-value">${r.score}%</span>`;
+                    container.appendChild(div);
+                });
+            } else {
+                container.innerHTML = '<div class="stat"><span class="stat-label">No results yet</span></div>';
+            }
+        }
+
+        async function submitQuestion() {
+            const qText = document.getElementById('qText').value.trim();
+            const opts = [document.getElementById('opt1').value.trim(), document.getElementById('opt2').value.trim(), document.getElementById('opt3').value.trim(), document.getElementById('opt4').value.trim()];
+            const correct = document.getElementById('correctOption').value.trim();
+            if (!qText || opts.some(o => !o) || !correct) {
+                alert('Please fill all question fields and correct option');
+                return;
+            }
+
+            const payload = JSON.stringify({ questionText: qText, options: opts, correctOption: correct });
+            try {
+                const response = await fetch(`${API_BASE}/api/questions`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: payload });
+                const text = await response.text();
+                const json = text ? JSON.parse(text) : null;
+                if (json && json.status === 'success') {
+                    log('Question added', 'success');
+                    // clear fields
+                    document.getElementById('qText').value = '';
+                    document.getElementById('opt1').value = '';
+                    document.getElementById('opt2').value = '';
+                    document.getElementById('opt3').value = '';
+                    document.getElementById('opt4').value = '';
+                    document.getElementById('correctOption').value = '';
+                } else {
+                    log('Failed to add question', 'error');
+                    alert('Failed to add question');
+                }
+            } catch (e) {
+                log('Error adding question: ' + e.message, 'error');
             }
         }
 

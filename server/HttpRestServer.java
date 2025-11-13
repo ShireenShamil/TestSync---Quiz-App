@@ -178,6 +178,14 @@ public class HttpRestServer {
                     
                 case "/api/students":
                     return handleGetStudents();
+
+                case "/api/logged":
+                    return handleGetLoggedUsers();
+
+                case "/api/questions":
+                    if ("POST".equals(method)) {
+                        return handleAddQuestion(body);
+                    }
                     
                 case "/api/results":
                     return handleGetResults();
@@ -223,10 +231,102 @@ public class HttpRestServer {
                 waitingCount
             );
         }
+
+        private String handleGetLoggedUsers() {
+            try {
+                Set<String> users = ExamServer.getLoggedInUsers();
+                StringBuilder sb = new StringBuilder();
+                sb.append("{\"status\": \"success\", \"users\":[");
+                boolean first = true;
+                for (String u : users) {
+                    if (!first) sb.append(',');
+                    sb.append('"').append(u).append('"');
+                    first = false;
+                }
+                sb.append("], \"count\": " ).append(users.size()).append("}");
+                return sb.toString();
+            } catch (Exception e) {
+                return "{\"status\": \"error\", \"message\": \"" + e.getMessage() + "\"}";
+            }
+        }
+
+        private String handleAddQuestion(String body) {
+            try {
+                // naive JSON parsing (expects fields questionText, options (array), correctOption)
+                String qText = extractJsonString(body, "questionText");
+                String optsRaw = extractJsonString(body, "options");
+                int correct = Integer.parseInt(extractJsonString(body, "correctOption"));
+
+                // parse options array from optsRaw (expects e.g. ["a","b","c","d"]) or CSV
+                List<String> opts = new ArrayList<>();
+                String s = optsRaw.trim();
+                if (s.startsWith("[")) {
+                    s = s.substring(1, s.length()-1);
+                    // split by \",\" pattern
+                    String[] parts = s.split("\\\",\\\"");
+                    for (String p : parts) {
+                        String t = p.replaceAll("^\"|\"$", "").trim();
+                        if (!t.isEmpty()) opts.add(t);
+                    }
+                } else {
+                    // comma separated
+                    for (String p : s.split(",")) opts.add(p.trim());
+                }
+
+                String[] options = opts.toArray(new String[0]);
+                Question q = new Question(qText, options, correct);
+                ExamServer.addQuestion(q);
+                return "{\"status\": \"success\", \"message\": \"Question added\"}";
+            } catch (Exception e) {
+                e.printStackTrace();
+                return "{\"status\": \"error\", \"message\": \"" + e.getMessage() + "\"}";
+            }
+        }
         
         private String handleGetResults() {
-            // This would return actual results from ResultManager
-            return "{\"status\": \"success\", \"results\": [], \"message\": \"Results endpoint active\"}";
+            try {
+                Map<String, Integer> scores = ResultManager.getAllScores();
+                StringBuilder sb = new StringBuilder();
+                sb.append("{\"status\": \"success\", \"results\":[");
+                boolean first = true;
+                for (Map.Entry<String, Integer> e : scores.entrySet()) {
+                    if (!first) sb.append(',');
+                    sb.append('{')
+                      .append("\"user\":\"").append(e.getKey()).append("\",")
+                      .append("\"score\":").append(e.getValue())
+                      .append('}');
+                    first = false;
+                }
+                sb.append("]}");
+                return sb.toString();
+            } catch (Exception e) {
+                e.printStackTrace();
+                return "{\"status\": \"error\", \"message\": \"" + e.getMessage() + "\"}";
+            }
+        }
+
+        // Very small helper to extract a JSON string value for a top-level key (naive)
+        private String extractJsonString(String json, String key) {
+            String pattern = "\"" + key + "\"\s*:\s*";
+            int idx = json.indexOf(pattern);
+            if (idx < 0) return "";
+            int start = idx + pattern.length();
+            // if starts with [ then extract array or raw
+            char c = json.charAt(start);
+            if (c == '[') {
+                int end = json.indexOf(']', start);
+                return json.substring(start, end+1).trim();
+            }
+            // find starting quote
+            int q1 = json.indexOf('"', start);
+            if (q1 < 0) {
+                // maybe a number
+                int comma = json.indexOf(',', start);
+                int end = comma > 0 ? comma : json.indexOf('}', start);
+                return json.substring(start, end).trim();
+            }
+            int q2 = json.indexOf('"', q1+1);
+            return json.substring(q1+1, q2);
         }
     }
 }

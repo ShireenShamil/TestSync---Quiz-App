@@ -11,6 +11,7 @@ import java.util.concurrent.*;
 public class ExamServer {
     private static final int PORT = 12345;
     private static List<Question> questions = new ArrayList<>();
+    private static Set<String> loggedInUsers = Collections.synchronizedSet(new HashSet<>());
     private static ExecutorService pool = Executors.newFixedThreadPool(10);
     private static volatile boolean examStarted = false;
     private static List<ClientHandler> waitingClients = Collections.synchronizedList(new ArrayList<>());
@@ -78,6 +79,19 @@ public class ExamServer {
             return totalConnectedStudents;  // After exam starts, show total
         }
     }
+
+    public static Set<String> getLoggedInUsers() {
+        return new HashSet<>(loggedInUsers);
+    }
+
+    public static synchronized void addQuestion(Question q) {
+        questions.add(q);
+        System.out.println("➕ New question added: " + q.getQuestionText());
+    }
+
+    public static Map<String, Integer> getAllScores() {
+        return ResultManager.getAllScores();
+    }
     
     public static void startExamViaAPI() {
         if (!examStarted) {
@@ -122,6 +136,10 @@ public class ExamServer {
                 }
                 
                 out.writeObject("Authentication successful!");
+                out.flush();
+
+                // track logged in user
+                loggedInUsers.add(username);
                 
                 // Add to waiting list and send waiting status
                 waitingClients.add(this);
@@ -154,7 +172,13 @@ public class ExamServer {
                     ResultManager.submitAnswer(username, q, answer);
                 }
 
-                out.writeObject("Exam completed! Thank you.");
+                // Compute score and send result to client immediately
+                int score = ResultManager.computeScore(username);
+                out.writeObject("RESULT:" + score);
+                out.flush();
+
+                // Optionally log and print all results on server
+                System.out.println("✅ " + username + " submitted. Score: " + score + "%");
                 ResultManager.printAllResults();
                 socket.close();
             } catch (EOFException | SocketException e) {
